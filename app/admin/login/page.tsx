@@ -1,44 +1,63 @@
 "use client"
 
-import type React from "react"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Shield, ArrowLeft, Lock } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Shield, ArrowLeft, Building2, Brain } from "lucide-react"
 import Link from "next/link"
-import { adminLogin } from "@/lib/admin-auth"
+import { userLogin } from "@/lib/user-auth"
 
-export default function AdminLoginPage() {
+export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const company = searchParams.get("company") || "newman"
+  
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  const [acceptTerms, setAcceptTerms] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+
+  const isNewman = company === "newman"
+  const companyName = isNewman ? "Newman Bienes Raíces" : "Consejo Estoico"
+  const companyIcon = isNewman ? Building2 : Brain
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+
+    if (!acceptTerms) {
+      setError("Debes aceptar los términos y condiciones")
+      return
+    }
+
     setLoading(true)
 
-    console.log("[v0] Client: Attempting login with:", { username, passwordLength: password.length })
+    console.log("[Login] Attempting login:", { username, company })
 
     try {
-      const result = await adminLogin(username.trim(), password)
-      console.log("[v0] Client: Login result:", result)
+      const result = await userLogin(username.trim(), password, company)
+      console.log("[Login] Result:", result)
 
       if (result.success) {
-        console.log("[v0] Client: Login successful, redirecting...")
-        router.push("/admin/dashboard")
+        console.log("[Login] ✅ Login successful")
+        
+        // Redirigir según necesite completar perfil
+        if (result.needsProfile) {
+          router.push("/complete-profile")
+        } else {
+          router.push("/chat")
+        }
         router.refresh()
       } else {
-        console.log("[v0] Client: Login failed:", result.error)
         setError(result.error || "Credenciales incorrectas")
       }
     } catch (err) {
-      console.error("[v0] Client: Login error:", err)
+      console.error("[Login] Error:", err)
       setError("Error al iniciar sesión. Intenta de nuevo.")
     } finally {
       setLoading(false)
@@ -46,45 +65,49 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-cyan-50 p-6">
       <div className="w-full max-w-md space-y-4">
         <Link href="/">
-          <Button variant="ghost" className="mb-4 text-white hover:bg-white/10">
+          <Button variant="ghost" className="mb-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver al inicio
           </Button>
         </Link>
 
-        <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
+        <Card className="border-2 border-blue-100">
           <CardHeader className="space-y-4 text-center">
             <div className="flex justify-center">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 shadow-lg shadow-cyan-500/50">
-                <Lock className="h-10 w-10 text-white" />
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg">
+                {companyIcon === Building2 ? (
+                  <Building2 className="h-10 w-10 text-white" />
+                ) : (
+                  <Brain className="h-10 w-10 text-white" />
+                )}
               </div>
             </div>
-            <CardTitle className="text-3xl text-white">Panel de Control</CardTitle>
-            <CardDescription className="text-slate-300">Acceso exclusivo para administradores</CardDescription>
+            <CardTitle className="text-3xl">{companyName}</CardTitle>
+            <CardDescription>
+              {isNewman 
+                ? "Ingresa con tus credenciales de asesor" 
+                : "Accede a tu coaching estoico personalizado"}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="grid gap-2">
-                <Label htmlFor="username" className="text-slate-200">
-                  Usuario
-                </Label>
+                <Label htmlFor="username">Usuario</Label>
                 <Input
                   id="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Ingresa tu usuario"
+                  placeholder={isNewman ? "Ej: NWMNLJT61333" : "Tu usuario"}
                   required
-                  autoComplete="off"
-                  className="bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-400"
+                  autoComplete="username"
+                  className="border-blue-200 focus:border-blue-500"
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="password" className="text-slate-200">
-                  Contraseña
-                </Label>
+                <Label htmlFor="password">Contraseña</Label>
                 <Input
                   id="password"
                   type="password"
@@ -92,32 +115,69 @@ export default function AdminLoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Ingresa tu contraseña"
                   required
-                  autoComplete="off"
-                  className="bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-400"
+                  autoComplete="current-password"
+                  className="border-blue-200 focus:border-blue-500"
                 />
               </div>
+
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="terms"
+                  checked={acceptTerms}
+                  onCheckedChange={(checked) => setAcceptTerms(checked as boolean)}
+                />
+                <label
+                  htmlFor="terms"
+                  className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Acepto los{" "}
+                  <Link href="/terms" className="text-blue-600 hover:underline">
+                    términos y condiciones
+                  </Link>{" "}
+                  (incluyendo que la IA aprende de mis interacciones para un servicio especializado)
+                </label>
+              </div>
+
               {error && (
-                <div className="rounded-lg bg-red-500/10 border border-red-500/50 p-3">
-                  <p className="text-sm text-red-400">{error}</p>
+                <div className="rounded-lg bg-red-50 border border-red-200 p-3">
+                  <p className="text-sm text-red-600">{error}</p>
                 </div>
               )}
+
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-semibold shadow-lg shadow-cyan-500/30"
-                disabled={loading}
+                className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+                disabled={loading || !acceptTerms}
               >
-                {loading ? "Verificando..." : "Ingresar al Panel"}
+                {loading ? "Verificando..." : "Iniciar Sesión"}
               </Button>
 
-              <div className="rounded-lg bg-slate-900/50 border border-slate-700 p-4 space-y-2">
-                <div className="flex items-center gap-2 text-slate-400 text-xs">
+              {/* Credenciales de ejemplo */}
+              <div className="rounded-lg bg-blue-50 border border-blue-200 p-4 space-y-2">
+                <div className="flex items-center gap-2 text-blue-600 text-xs">
                   <Shield className="h-3 w-3" />
-                  <span>Credenciales de acceso</span>
+                  <span>Credenciales de prueba</span>
                 </div>
                 <div className="font-mono text-sm space-y-1">
-                  <p className="text-cyan-400">Usuario: admin</p>
-                  <p className="text-cyan-400">Contraseña: admin123</p>
+                  {isNewman ? (
+                    <>
+                      <p className="text-blue-700">Usuario: NWMNLJT61333</p>
+                      <p className="text-blue-700">Contraseña: Newman2025!</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-blue-700">Usuario: CESTXYZ123</p>
+                      <p className="text-blue-700">Contraseña: Estoico2025!</p>
+                    </>
+                  )}
                 </div>
+              </div>
+
+              <div className="text-center text-sm text-gray-600">
+                ¿Necesitas ayuda?{" "}
+                <Link href="/soporte" className="text-blue-600 hover:underline">
+                  Contactar soporte
+                </Link>
               </div>
             </form>
           </CardContent>

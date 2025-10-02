@@ -73,4 +73,4 @@ Cuando un usuario inicia sesión por primera vez:
 - Se eliminó "Consejo Estoico/Modo Sargento" - solo existe Newman Bienes Raíces
 \`\`\`
 
-```typescript file="" isHidden
+\`\`\`typescript file="" isHidden
