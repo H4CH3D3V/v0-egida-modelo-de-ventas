@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { createClient } from "@/lib/supabase/client"
+import { signUpAction } from "@/app/auth/actions"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -59,54 +58,30 @@ function SignupForm() {
       return
     }
 
-    const supabase = createClient()
     setIsLoading(true)
     setError(null)
 
     try {
-      // Sign up with metadata
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      const result = await signUpAction({
         email: formData.email,
         password: formData.password,
-        options: {
-          emailRedirectTo:
-            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-            `${window.location.origin}${company ? `/${company}/chat` : "/chat"}`,
-          data: {
-            username: formData.username,
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            phone: formData.phone.startsWith("+52") ? formData.phone : `+52${formData.phone}`,
-            age: Number.parseInt(formData.age),
-            city: formData.city,
-          },
-        },
+        username: formData.username,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone,
+        age: formData.age,
+        city: formData.city,
+        company: company || undefined,
       })
 
-      if (signUpError) throw signUpError
-
-      // Send Telegram notification (this would be handled by an API route in production)
-      if (data.user) {
-        await fetch("/api/telegram/notify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "new_user",
-            userId: data.user.id,
-            data: {
-              username: formData.username,
-              name: `${formData.firstName} ${formData.lastName}`,
-              phone: formData.phone,
-              age: formData.age,
-              city: formData.city,
-            },
-          }),
-        })
+      if (result.error) {
+        setError(result.error)
+        return
       }
 
       router.push("/auth/signup-success")
-    } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "Ocurrió un error")
+    } catch {
+      setError("Ocurrió un error inesperado")
     } finally {
       setIsLoading(false)
     }
@@ -166,7 +141,7 @@ function SignupForm() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="phone">Teléfono (+52)</Label>
+                  <Label htmlFor="phone">Telefono (+52)</Label>
                   <Input
                     id="phone"
                     type="tel"
@@ -204,7 +179,7 @@ function SignupForm() {
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="password">Contraseña</Label>
+                  <Label htmlFor="password">Contrasena</Label>
                   <Input
                     id="password"
                     type="password"
@@ -214,7 +189,7 @@ function SignupForm() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="repeatPassword">Repetir Contraseña</Label>
+                  <Label htmlFor="repeatPassword">Repetir Contrasena</Label>
                   <Input
                     id="repeatPassword"
                     type="password"
@@ -230,7 +205,7 @@ function SignupForm() {
                     onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
                   />
                   <Label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
-                    Acepto los términos y condiciones (incluyendo que la IA aprende de mis interacciones para un
+                    Acepto los terminos y condiciones (incluyendo que la IA aprende de mis interacciones para un
                     servicio especializado como socio cognitivo cotidiano y profesional, de forma ofuscada para
                     privacidad)
                   </Label>
@@ -241,12 +216,12 @@ function SignupForm() {
                 </Button>
               </div>
               <div className="mt-4 text-center text-sm">
-                ¿Ya tienes cuenta?{" "}
+                Ya tienes cuenta?{" "}
                 <Link
                   href={`/auth/login${company ? `?company=${company}` : ""}`}
                   className="underline underline-offset-4"
                 >
-                  Inicia sesión
+                  Inicia sesion
                 </Link>
               </div>
             </form>

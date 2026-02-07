@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { createClient } from "@/lib/supabase/client"
+import { signInWithUsernameAction } from "@/app/auth/actions"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -26,46 +25,21 @@ function LoginForm() {
     e.preventDefault()
 
     if (!acceptedTerms) {
-      setError("Debes aceptar los términos y condiciones")
+      setError("Debes aceptar los terminos y condiciones")
       return
     }
 
-    const supabase = createClient()
     setIsLoading(true)
     setError(null)
 
     try {
-      // First, get user by username to find their email
-      const { data: profiles, error: profileError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("username", username)
-        .single()
-
-      if (profileError || !profiles) {
-        setError("Usuario o contraseña incorrectos")
-        setIsLoading(false)
-        return
-      }
-
-      // Get email from auth.users
-      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(profiles.id)
-
-      if (userError || !userData.user?.email) {
-        setError("Usuario o contraseña incorrectos")
-        setIsLoading(false)
-        return
-      }
-
-      // Sign in with email and password
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: userData.user.email,
+      const result = await signInWithUsernameAction({
+        username: username.trim(),
         password,
       })
 
-      if (signInError) {
-        setError("Usuario o contraseña incorrectos")
-        setIsLoading(false)
+      if (result.error) {
+        setError(result.error)
         return
       }
 
@@ -74,8 +48,8 @@ function LoginForm() {
       } else {
         router.push("/newman/chat")
       }
-    } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "Ocurrió un error")
+    } catch {
+      setError("Ocurrio un error inesperado")
     } finally {
       setIsLoading(false)
     }
@@ -86,9 +60,9 @@ function LoginForm() {
       <div className="w-full max-w-sm">
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">Iniciar Sesión</CardTitle>
+            <CardTitle className="text-2xl">Iniciar Sesion</CardTitle>
             <CardDescription>
-              {company === "newman" ? "Newman Bienes Raíces" : "Égida Modelo de Ventas"}
+              {company === "newman" ? "Newman Bienes Raices" : "Egida Modelo de Ventas"}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -106,7 +80,7 @@ function LoginForm() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="password">Contraseña</Label>
+                  <Label htmlFor="password">Contrasena</Label>
                   <Input
                     id="password"
                     type="password"
@@ -122,23 +96,23 @@ function LoginForm() {
                     onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
                   />
                   <Label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
-                    Acepto los términos y condiciones (incluyendo que la IA aprende de mis interacciones para un
+                    Acepto los terminos y condiciones (incluyendo que la IA aprende de mis interacciones para un
                     servicio especializado como socio cognitivo cotidiano y profesional, de forma ofuscada para
                     privacidad)
                   </Label>
                 </div>
                 {error && <p className="text-sm text-destructive">{error}</p>}
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
+                  {isLoading ? "Iniciando sesion..." : "Iniciar Sesion"}
                 </Button>
               </div>
               <div className="mt-4 text-center text-sm">
-                ¿No tienes cuenta?{" "}
+                No tienes cuenta?{" "}
                 <Link
                   href={`/auth/signup${company ? `?company=${company}` : ""}`}
                   className="underline underline-offset-4"
                 >
-                  Regístrate
+                  Registrate
                 </Link>
               </div>
             </form>

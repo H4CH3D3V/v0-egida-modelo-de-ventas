@@ -1,7 +1,7 @@
 "use server"
 
 import { cookies } from "next/headers"
-import { supabaseAdmin, getUserByUsername } from "./supabase"
+import { supabaseAdmin, getUserByUsername } from "./superbase"
 
 // Usuarios Newman pre-cargados
 const NEWMAN_USERS = [
